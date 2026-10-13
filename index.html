@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>8-Max NLHE · 职业级剥削策略</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { overflow-x: hidden; }
+  body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #0b0b0b; color: #eee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 8px; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  h1 { font-size: 16px; color: #d4af37; margin: 4px 0 8px; letter-spacing: 2px; text-align: center; }
+
+  .key-bar { display: flex; gap: 6px; align-items: center; justify-content: center; background: #1a1a2e; border: 1px solid #7c3aed; border-radius: 10px; padding: 8px 10px; margin: 4px 0; width: 100%; max-width: 900px; flex-wrap: wrap; }
+  .key-bar input { flex: 1; min-width: 180px; background: #0e0e0e; border: 1px solid #444; color: #eee; border-radius: 6px; padding: 10px 12px; font-size: 14px; outline: none; font-family: monospace; }
+  .key-bar input:focus { border-color: #7c3aed; }
+  #keyStatus { width: 100%; text-align: center; font-size: 12px; color: #a78bfa; margin-top: 4px; min-height: 14px; }
+
+  .btn-gold { background: #d4af37; color: #000; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; min-height: 40px; }
+  .btn-gold:active { filter: brightness(0.9); }
+  .btn-ai { background: #7c3aed; color: #fff; border: none; padding: 14px 24px; border-radius: 10px; font-size: 16px; font-weight: 800; cursor: pointer; min-height: 48px; width: 100%; max-width: 400px; }
+  .btn-ai:active { filter: brightness(0.9); }
+  .btn-ai:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-red { background: #c62828; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 700; min-height: 44px; }
+
+  .auto-switch { display:flex; align-items:center; gap:6px; background:#0e0e0e; border:1px solid #444; border-radius:8px; padding:8px 12px; cursor:pointer; min-height:40px; }
+  .auto-switch.on { border-color:#10b981; }
+  .auto-switch .dot { width:10px; height:10px; border-radius:50%; background:#444; }
+  .auto-switch.on .dot { background:#10b981; box-shadow:0 0 8px #10b981; }
+  .auto-switch .txt { font-size:12px; color:#aaa; font-weight:700; }
+  .auto-switch.on .txt { color:#10b981; }
+
+  .opp-drawer-btn { position: fixed; top: 10px; right: 10px; z-index: 500; background: #d4af37; color: #000; border: none; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.5); min-height: 44px; }
+  .opp-drawer { position: fixed; top: 0; right: -100%; width: 90%; max-width: 500px; height: 100vh; background: #0e0e0e; border-left: 2px solid #d4af37; z-index: 600; transition: right .3s; overflow-y: auto; padding: 16px; }
+  .opp-drawer.open { right: 0; }
+  .opp-drawer-close { position: sticky; top: 0; float: right; background: #c62828; color: #fff; border: none; padding: 10px 14px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; min-height: 44px; z-index: 10; }
+  .opp-type-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .opp-type-card { background: #101010; border: 1px solid #333; border-radius: 10px; padding: 10px; }
+  .opp-type-card.opp-card-inactive { opacity: .35; }
+  .opp-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .opp-seat-name { font-size: 13px; font-weight: 800; color: #d4af37; }
+  .opp-role-name { font-size: 11px; color: #999; background: #1f1f1f; border: 1px solid #333; padding: 1px 7px; border-radius: 4px; }
+  .opp-type-badge { display: inline-block; padding: 2px 9px; border-radius: 4px; font-weight: 800; font-size: 11px; }
+  .opp-type-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .type-tag { font-size: 12px; padding: 6px 12px; border-radius: 14px; border: 1px solid; cursor: pointer; background: #171717; font-weight: 600; min-height: 32px; display: inline-flex; align-items: center; }
+  .type-tag.selected { font-weight: 900; }
+  .opp-card-tip { font-size: 11px; color: #ff8c42; line-height: 1.45; background: rgba(255,140,66,.07); padding: 6px 9px; border-left: 2px solid #ff8c42; border-radius: 4px; }
+  .opp-data-toolbar { display: flex; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+  .opp-data-toolbar .btn-gold { font-size: 11px; padding: 8px 10px; }
+  .opp-table-wrap { display: none; margin-top: 12px; overflow-x: auto; border-top: 1px dashed #333; padding-top: 12px; }
+  .opp-table-wrap.open { display: block; }
+  .opp-table { min-width: 1200px; border-collapse: collapse; font-size: 11px; }
+  .opp-table th { background: #1f1f1f; color: #aaa; padding: 5px 3px; text-align: center; border: 1px solid #333; }
+  .opp-table td { padding: 3px 2px; text-align: center; border: 1px solid #2a2a2a; }
+  .opp-table input { width: 42px; background: #0e0e0e; border: 1px solid #444; color: #eee; border-radius: 3px; padding: 4px 2px; font-size: 11px; text-align: center; }
+  .opp-tip { font-size: 10px; color: #b8b8b8; text-align: left; padding-left: 6px; max-width: 240px; white-space: normal; }
+
+  .table-scale-wrap { width: 100%; display: flex; justify-content: center; align-items: flex-start; overflow: hidden; margin: 4px 0; }
+  .table-wrap { position: relative; width: 860px; height: 540px; flex-shrink: 0; transform-origin: top center; }
+  .pt { width: 100%; height: 100%; border-radius: 250px; background: radial-gradient(ellipse at center, #1a7a52 0%, #0f5c3a 50%, #093d26 100%); border: 16px solid #3b2214; box-shadow: 0 0 0 5px #1a0e06, 0 12px 50px rgba(0,0,0,.9), inset 0 0 100px rgba(0,0,0,.5); position: relative; }
+  .table-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: rgba(255,255,255,.05); font-size: 26px; font-weight: 900; letter-spacing: 6px; pointer-events: none; }
+  .seat { position: absolute; width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(145deg, #2a2a2a, #1a1a1a); border: 3px solid #555; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; z-index: 5; }
+  .seat .seat-name { font-size: 11px; font-weight: 800; color: #ccc; }
+  .seat .seat-role { font-size: 9px; color: #888; margin-top: 1px; }
+  .seat .seat-cards { position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; z-index: 6; }
+  .seat .seat-label { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 700; white-space: nowrap; padding: 2px 6px; border-radius: 3px; background: rgba(0,0,0,.85); border: 1px solid #555; display: none; }
+  .seat.my-seat { border-color: #d4af37; box-shadow: 0 0 12px rgba(212,175,55,.4); }
+  .seat.active-seat { border-color: #4fc3f7; box-shadow: 0 0 20px rgba(79,195,247,.6); animation: pulse 1s infinite; }
+  .seat.folded { opacity: .3; filter: grayscale(1); }
+  .seat.inactive-seat { opacity: .35; filter: grayscale(1); }
+  .seat .seat-toggle { position: absolute; top: -14px; right: -14px; width: 22px; height: 22px; border-radius: 50%; background: #444; border: 1px solid #888; color: #fff; font-size: 11px; line-height: 18px; text-align: center; cursor: pointer; }
+  .seat .seat-stack-input { width: 50px; height: 16px; margin-top: 2px; background: #0e0e0e; border: 1px solid #444; color: #ffd54f; border-radius: 3px; padding: 0 2px; font-size: 10px; font-weight: 800; text-align: center; outline: none; -moz-appearance: textfield; }
+  .seat .seat-stack-input::-webkit-outer-spin-button, .seat .seat-stack-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .seat.folded .seat-stack-input { color: #777; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 20px rgba(79,195,247,.6); } 50% { box-shadow: 0 0 30px rgba(79,195,247,.9); } }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+  .pos-0 { bottom: 22px; left: 50%; transform: translateX(-50%); }
+  .pos-1 { bottom: 22px; left: 120px; }
+  .pos-2 { top: 234px; left: 35px; }
+  .pos-3 { top: 80px; left: 120px; }
+  .pos-4 { top: 22px; left: 50%; transform: translateX(-50%); }
+  .pos-5 { top: 80px; right: 120px; }
+  .pos-6 { top: 234px; right: 35px; }
+  .pos-7 { bottom: 22px; right: 120px; }
+  .center-area { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; width: 400px; z-index: 1; }
+  .pot-display { font-size: 15px; font-weight: 700; color: #ffd54f; margin-bottom: 5px; }
+  .community-cards { display: flex; justify-content: center; gap: 5px; min-height: 60px; margin-bottom: 6px; }
+  .street-label { font-size: 12px; color: rgba(255,255,255,.55); margin-bottom: 3px; }
+  .action-panel { position: absolute; z-index: 20; background: linear-gradient(135deg, #1a1a2e, #141428); border: 2px solid #4fc3f7; border-radius: 12px; padding: 14px 16px; min-width: 340px; max-width: 460px; box-shadow: 0 8px 30px rgba(0,0,0,.8); display: none; top: 42%; left: 50%; transform: translate(-50%,-50%); }
+  .action-panel.my-turn { border-color: #d4af37 !important; }
+  .ap-title { font-size: 14px; font-weight: 800; color: #4fc3f7; margin-bottom: 4px; text-align: center; }
+  .ap-info { font-size: 11px; color: #aaa; margin-bottom: 8px; text-align: center; line-height: 1.5; }
+  .ap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+  .btn { padding: 12px 4px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; min-height: 44px; }
+  .btn:active { filter: brightness(0.9); }
+  .btn-fold { background: #b71c1c; color: #fff; }
+  .btn-check { background: #455a64; color: #fff; }
+  .btn-call { background: #1565c0; color: #fff; }
+  .btn-raise { background: #2e7d32; color: #fff; }
+  .btn-allin { background: #f9a825; color: #000; }
+  .raise-area { display: none; margin-top: 6px; padding-top: 8px; border-top: 1px solid #333; }
+  .raise-presets { display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap; }
+  .raise-preset-btn { flex: 1; min-width: 62px; padding: 8px 4px; border: 1px solid #444; border-radius: 6px; background: #222; color: #66bb6a; font-size: 11px; font-weight: 700; cursor: pointer; min-height: 40px; }
+  .raise-input-row { display: flex; gap: 6px; align-items: center; }
+  .raise-input { flex: 1; padding: 10px 8px; border: 1px solid #555; border-radius: 6px; background: #1a1a1a; color: #66bb6a; font-size: 15px; font-weight: 700; text-align: center; outline: none; }
+  .raise-confirm { padding: 10px 16px; border: none; border-radius: 6px; background: #2e7d32; color: #fff; font-size: 14px; font-weight: 700; min-height: 44px; }
+
+  .poker-card { width: 40px; height: 58px; background: linear-gradient(145deg, #1a1a1a, #2d2d2d); border-radius: 6px; border: 1px solid #555; position: relative; display: inline-flex; justify-content: center; align-items: center; box-shadow: 2px 3px 8px rgba(0,0,0,.7); flex-shrink: 0; }
+  .poker-card .card-corner { position: absolute; font-size: 11px; font-weight: 900; line-height: 1; }
+  .poker-card .corner-tl { top: 3px; left: 4px; text-align: center; }
+  .poker-card .corner-br { bottom: 3px; right: 4px; text-align: center; transform: rotate(180deg); }
+  .poker-card .card-rank { display: block; font-size: 10px; color: #fff; }
+  .poker-card .card-suit { display: block; font-size: 8px; color: #ddd; }
+  .poker-card .card-center { font-size: 20px; color: #fff; }
+  .poker-card.red .card-rank, .poker-card.red .card-suit, .poker-card.red .card-center { color: #ff6b6b; }
+  .poker-card.blk .card-rank, .poker-card.blk .card-suit, .poker-card.blk .card-center { color: #f0f0f0; }
+  .poker-card.mini { width: 32px; height: 46px; }
+  .poker-card.mini .card-rank { font-size: 9px; } .poker-card.mini .card-suit { font-size: 7px; } .poker-card.mini .card-center { font-size: 16px; }
+  .poker-card.back { background: rgba(20,20,20,.6); border: 2px dashed rgba(255,255,255,.2); }
+  .poker-card.back::after { content: '?'; color: rgba(255,255,255,.3); font-size: 14px; }
+
+  .setup-bar { display: flex; gap: 6px; align-items: center; justify-content: center; background: #161616; border: 1px solid #333; border-radius: 10px; padding: 8px; margin: 6px 0; width: 100%; max-width: 900px; flex-wrap: wrap; }
+  .setup-item { display: flex; align-items: center; gap: 4px; }
+  .setup-item label { font-size: 11px; color: #aaa; }
+  .setup-item select, .setup-item input { background: #0e0e0e; border: 1px solid #444; color: #eee; border-radius: 5px; padding: 8px 6px; font-size: 12px; width: 64px; text-align: center; outline: none; min-height: 40px; }
+  .setup-item select { width: 100px; }
+
+  .ai-advice { margin-top: 8px; width: 100%; max-width: 900px; background: linear-gradient(135deg, #1a1a2e, #141428); border: 2px solid #7c3aed; border-radius: 10px; padding: 12px 16px; display: none; }
+  .ai-advice-title { font-size: 13px; font-weight: 800; color: #a78bfa; margin-bottom: 8px; display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 6px; }
+  .ai-advice-title .live-dot { font-size:10px; color:#10b981; font-weight:600; display:none; }
+  .ai-advice-title .live-dot.on { display:inline-block; }
+  .ai-advice-title .timer { font-size: 11px; color: #888; font-weight: 400; }
+  .ai-advice-content { font-size: 22px; line-height: 1.5; color: #d4af37; white-space: pre-wrap; font-weight: 900; text-align: center; }
+  .math-info { font-size: 11px; color: #888; margin-top: 8px; text-align: center; line-height: 1.6; }
+
+  .btn-row { display: flex; gap: 8px; justify-content: center; margin: 8px 0; flex-wrap: wrap; align-items:center; width: 100%; }
+  .action-log { margin-top: 8px; max-height: 120px; overflow-y: auto; background: #111; border-radius: 8px; padding: 8px 12px; font-size: 12px; line-height: 1.8; border: 1px solid #222; display: none; width: 100%; max-width: 900px; }
+  .log-fold { color: #3b82f6; } .log-call { color: #f59e0b; } .log-raise { color: #ef4444; } .log-check { color: #10b981; } .log-info { color: #888; }
+
+  .picker-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.95); z-index: 1000; display: none; flex-direction: column; padding: 12px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .picker-modal.open { display: flex; }
+  .picker-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px 14px; position: sticky; top: 0; background: rgba(0,0,0,.95); z-index: 2; }
+  .picker-title { font-size: 18px; font-weight: 800; color: #d4af37; }
+  .picker-close { background: #c62828; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 700; min-height: 44px; }
+  .picker-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding-bottom: 30px; }
+  .picker-suit-col { display: flex; flex-direction: column; gap: 6px; }
+  .picker-suit-header { text-align: center; font-size: 30px; font-weight: 800; padding: 6px 0; border-bottom: 2px solid #444; margin-bottom: 6px; }
+  .picker-suit-header.red { color: #e53935; } .picker-suit-header.blk { color: #eee; }
+  .picker-card-btn { width: 100%; padding: 14px 0; background: #2a2a2a; border: 2px solid #444; border-radius: 10px; font-size: 22px; font-weight: 800; cursor: pointer; text-align: center; line-height: 1; min-height: 56px; }
+  .picker-card-btn.red { color: #e53935; } .picker-card-btn.blk { color: #eee; }
+  .picker-card-btn:active:not(:disabled) { background: #3a3a3a; border-color: #d4af37; }
+  .picker-card-btn:disabled { background: #111; cursor: not-allowed; opacity: 0.3; }
+  .picker-card-btn.selected { border-color: #4fc3f7; box-shadow: 0 0 12px rgba(79,195,247,.6); }
+
+  .waiting-overlay { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 2000; background: linear-gradient(135deg, #1a1a2e, #141428); border: 3px solid #d4af37; border-radius: 14px; padding: 24px 32px; text-align: center; box-shadow: 0 0 40px rgba(212,175,55,.5); display: none; max-width: 90vw; }
+  .waiting-overlay .wo-title { font-size: 20px; font-weight: 900; color: #d4af37; margin-bottom: 10px; }
+  .waiting-overlay .wo-sub { font-size: 13px; color: #ccc; }
+
+  @media (max-width: 950px) {
+    body { padding: 6px; }
+    h1 { font-size: 14px; }
+    .key-bar { padding: 6px 8px; }
+    .key-bar input { font-size: 13px; padding: 8px 10px; min-width: 150px; }
+    .btn-gold { padding: 8px 12px; font-size: 12px; }
+    .setup-bar { padding: 6px; }
+    .setup-item select, .setup-item input { font-size: 11px; padding: 6px 4px; width: 58px; }
+    .ai-advice-content { font-size: 20px; }
+    .picker-card-btn { font-size: 20px; padding: 12px 0; min-height: 50px; }
+  }
+  @media (max-width: 700px) {
+    .key-bar { flex-direction: column; align-items: stretch; }
+    .key-bar input { min-width: 100%; }
+    .setup-bar { gap: 4px; }
+    .ai-advice-content { font-size: 18px; }
+  }
+  @media (orientation: landscape) and (max-width: 1100px) {
+    h1 { font-size: 13px; margin: 2px 0 4px; }
+    .key-bar { margin: 2px 0; padding: 5px 8px; }
+    .setup-bar { margin: 3px 0; padding: 5px 8px; }
+    .ai-advice-content { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>♦ 8-Max NLHE · 职业级剥削策略 ♠</h1>
+
+<button class="opp-drawer-btn" onclick="toggleOppDrawer()">📊 对手</button>
+
+<div class="key-bar">
+  <input type="text" id="apiKeyInput" placeholder="sk-... DeepSeek API Key">
+  <button class="btn-gold" onclick="saveApiKey()">保存</button>
+  <button class="btn-gold" onclick="testApi()">测试</button>
+  <div class="auto-switch on" id="autoAdviceSwitch" onclick="toggleAutoAdvice()">
+    <span class="dot"></span>
+    <span class="txt">自动建议：开</span>
+  </div>
+  <div id="keyStatus"></div>
+</div>
+
+<div class="setup-bar">
+  <div class="setup-item">
+    <label>庄位</label>
+    <select id="dealerSelect" onchange="onDealerChange(this.value)">
+      <option value="">— 选择 —</option>
+      <option value="0">座位0（我）</option><option value="1">座位1</option><option value="2">座位2</option>
+      <option value="3">座位3</option><option value="4">座位4</option><option value="5">座位5</option>
+      <option value="6">座位6</option><option value="7">座位7</option>
+    </select>
+  </div>
+  <div class="setup-item"><label>筹码</label><input type="number" id="chipInput" value="40" min="10" step="5"></div>
+  <div class="setup-item"><label>小盲</label><input type="number" id="sbInput" value="0.5" min="0" step="0.5"></div>
+  <div class="setup-item"><label>大盲</label><input type="number" id="bbInput" value="1" min="0" step="0.5"></div>
+  <div class="setup-item"><label>抓头</label><input type="number" id="straddleInput" value="0" min="0" step="0.5"></div>
+  <div class="setup-item"><label>底注</label><input type="number" id="anteInput" value="0" min="0" step="0.5"></div>
+  <button class="btn-gold" onclick="startNewHand()">开始</button>
+  <button class="btn-gold" onclick="rotateAndStart()">换庄</button>
+</div>
+
+<div class="table-scale-wrap">
+  <div class="table-wrap" id="tableWrap">
+    <div class="pt">
+      <div class="table-text">8-MAX NLHE</div>
+      <div class="seat pos-0" id="seat-0" onclick="clickSeat(0)">
+        <span class="seat-name">玩家</span><span class="seat-role" id="role-0">—</span>
+        <input type="number" class="seat-stack-input" id="stackInput-0" value="40" step="0.5" min="0"
+               onclick="event.stopPropagation()" onchange="onStackInputChange(0,this.value)">
+        <div class="seat-cards" id="cards-0"></div><div class="seat-label" id="label-0"></div>
+      </div>
+      <div class="seat pos-1" id="seat-1" onclick="clickSeat(1)">
+        <span class="seat-name">座位1</span><span class="seat-role" id="role-1">—</span>
+        <input type="number" class="seat-stack-input" id="stackInput-1" value="40" step="0.5" min="0"
+               onclick="event.stopPropagation()" onchange="onStackInputChange(1,this.value)">
+        <div class="seat-cards" id="cards-1"></div><div class="seat-label" id="label-1"></div>
+        <div class="seat-toggle" onclick="toggleSeatActive(1)">✕</div>
+      </div>
+      <div class="seat pos-2" id="seat-2" onclick="clickSeat(2)">
+        <span class="seat-name">座位2</span><span class="seat-role" id="role-2">—</span>
+        <input type="number" class="seat-stack-input" id="stackInput-2" value="40" step="0.5" min="0"
+               onclick="event.stopPropagation()" onchange="onStackInputChange(2,this.value)">
+        <div class="seat-cards" id="cards-2"></div><div class="seat-label" id="label-2"></div>
+        <div class="seat-toggle" onclick="toggleSeatActive(2)">✕</div>
+      </div>
+      <div class="seat pos-3" id="seat-3" onclick="clickSeat(3)">
+        <span class="seat-name">座位3</span><span class="seat-role" id="role-3">—</span>
+        <input type="number" class="seat-stack-input" id="stackInput-3" value="40" step="0.5" min="0"
+               onclick="event.stopPropagation()" onchange="onStackInputChange(3,this.value)">
+        <div class="seat-cards" id="cards-3"></div><div class="seat-label" id="label-3"></div>
+        <div class="seat-toggle" onclick="toggleSeatActive(3)">✕</div>
+      </div>
+      <div class="seat pos-4" id="seat-4" onclick="clickSeat(4)">
+        <span class="seat-name">座位4</span><span class="seat-role" id="role-4">—</span>
+        <input type="number" class="seat-stack-input" id="stackInput-4" value="40" step="0.5" min="0"
+               onclick="event.stopPropagation()" onchange="onStackInputChange(4,this.value)">
+        <div class="seat-cards" id="cards-4"></div><div class="seat-label" id="label-4"></div>
+        <div class="seat-toggle" onclick="toggleSeatActive(4)">✕</div>
+      </div>
+      <div class="seat pos-5" id="seat-5" onclick="clickSeat(5)">
+        <span class="seat-name">座位5</span><span class="seat-role" id="role-5">—</span>
+        <input type="number" class="seat-stack-input" id="stackInput-5" value="40" step="0.5" min="0"
+               onclick="event.stopPropagation()" onchange="onStackInputChange(5,this.value)">
+        <div class="seat-cards" id="cards-5"></div><div class="seat-label" id="label-5"></div>
+        <div class="seat-toggle" onclick="toggleSeatActive(5)">✕</div>
+      </div>
+      <div class="seat pos-6" id="seat-6" onclick="clickSeat(6)">
+        <span class="seat-name">座位6</span><span class="seat-role" id="role-6">—</span>
+        <input type="number" class="seat-stack-input" id="stackInput-6" value="40" step="0.5" min="0"
+               onclick="event.stopPropagation()" onchange="onStackInputChange(6,this.value)">
+        <div class="seat-cards" id="cards-6"></div><div class="seat-label" id="label-6"></div>
+        <div class="seat-toggle" onclick="toggleSeatActive(6)">✕</div>
+      </div>
+      <div class="seat pos-7" id="seat-7" onclick="clickSeat(7)">
+        <span class="seat-name">座位7</span><span class="seat-role" id="role-7">—</span>
+        <input type="number" class="seat-stack-input" id="stackInput-7" value="40" step="0.5" min="0"
+               onclick="event.stopPropagation()" onchange="onStackInputChange(7,this.value)">
+        <div class="seat-cards" id="cards-7"></div><div class="seat-label" id="label-7"></div>
+        <div class="seat-toggle" onclick="toggleSeatActive(7)">✕</div>
+      </div>
+      <div class="center-area">
+        <div class="street-label" id="streetLabel">选择庄位开始</div>
+        <div class="pot-display" id="potDisplay">底池: 0 BB</div>
+        <div class="community-cards" id="communityCards"></div>
+      </div>
+      <div class="action-panel" id="actionPanel">
+        <div class="ap-title" id="apTitle">行动</div>
+        <div class="ap-info" id="apInfo"></div>
+        <div class="ap-grid" id="apGrid"></div>
+        <div class="raise-area" id="raiseArea">
+          <div class="raise-presets" id="raisePresets"></div>
+          <div class="raise-input-row"><input type="number" class="raise-input" id="raiseInput" min="0" step="0.1"><button class="raise-confirm" onclick="confirmRaise()">确认</button></div>
+          <div class="ap-info" id="raiseMinMax"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ai-advice" id="aiAdvice">
+  <div class="ai-advice-title">
+    <span id="aiAdviceTitle">🤖 DeepSeek 职业级建议</span>
+    <span class="timer" id="aiTimer"></span>
+    <span class="live-dot" id="liveDot">● 输出中</span>
+  </div>
+  <div class="ai-advice-content" id="aiAdviceContent"></div>
+  <div class="math-info" id="mathInfo"></div>
+</div>
+
+<div class="btn-row">
+  <button class="btn-ai" id="aiBtn" onclick="getAIAdvice(true)">🤖 立即获取 DeepSeek 建议</button>
+</div>
+
+<div class="btn-row">
+  <button class="btn-red" onclick="resetAll()">⟳ 重置整局</button>
+</div>
+
+<div class="action-log" id="actionLog"></div>
+
+<div class="picker-modal" id="cardPicker">
+  <div class="picker-header">
+    <span class="picker-title" id="cardPickerTitle">请选择手牌</span>
+    <button class="picker-close" onclick="closePicker()">✕ 关闭</button>
+  </div>
+  <div class="picker-grid" id="cardGrid"></div>
+</div>
+
+<div class="waiting-overlay" id="waitingOverlay">
+  <div class="wo-title">🎴 轮到你行动</div>
+  <div class="wo-sub">请选择你的两张手牌</div>
+</div>
+
+<div class="opp-drawer" id="oppDrawer">
+  <button class="opp-drawer-close" onclick="toggleOppDrawer()">✕ 关闭</button>
+  <h2 style="font-size:15px; color:#d4af37; margin-bottom:8px;">📊 对手类型设置</h2>
+  <div class="opp-data-toolbar">
+    <button class="btn-gold" onclick="autoFillOppStats()">自动统计</button>
+    <button class="btn-gold" onclick="fillSampleData()">示例类型</button>
+    <button class="btn-gold" onclick="toggleDetailTable()">详细表</button>
+    <button class="btn-gold" onclick="resetOppStats()">清空</button>
+  </div>
+  <div class="opp-type-grid" id="oppTypeGrid"></div>
+  <div class="opp-table-wrap" id="oppDetailWrap">
+    <table class="opp-table">
+      <thead>
+        <tr>
+          <th>座位</th><th>手数</th><th>VPIP</th><th>PFR</th><th>入池胜</th><th>每手胜</th><th>AF</th>
+          <th>bb/100</th><th>翻前胜</th><th>翻牌率</th><th>翻牌胜</th><th>AllIn</th><th>摊牌率</th>
+          <th>摊牌胜</th><th>类型</th><th style="text-align:left;">建议</th>
+        </tr>
+      </thead>
+      <tbody id="oppTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+/* ==================================================================
+   对手类型预设
+   ================================================================== */
+function emptyStats(){
+  return {hands:0,vpip:0,pfr:0,wwsf:0,winRate:0,af:0,bb100:0,
+          preflopWin:0,flopRate:0,flopWin:0,allinWin:0,wtsd:0,wsd:0};
+}
+
+const OPP_TYPE_PRESETS = [
+  { key:'TAG', name:'紧凶', color:'#3b82f6',
+    tip:'尊重其强范围；用位置优势对抗，避免无谓大底池。',
+    stats:{hands:1000,vpip:22,pfr:18,wwsf:45,winRate:12,af:2.4,bb100:5,
+           preflopWin:10,flopRate:48,flopWin:18,allinWin:52,wtsd:24,wsd:52} },
+  { key:'LAG', name:'松凶', color:'#a78bfa',
+    tip:'让他继续下注，强牌慢打诱导；扩大价值跟注范围，别用空气硬碰。',
+    stats:{hands:800,vpip:38,pfr:28,wwsf:42,winRate:13,af:2.8,bb100:6,
+           preflopWin:14,flopRate:62,flopWin:19,allinWin:50,wtsd:26,wsd:50} },
+  { key:'NIT', name:'紧弱', color:'#10b981',
+    tip:'疯狂偷盲 + 小注 cbet 33%；一旦被反抗立即弃牌。',
+    stats:{hands:600,vpip:15,pfr:11,wwsf:38,winRate:9,af:1.2,bb100:-5,
+           preflopWin:7,flopRate:30,flopWin:13,allinWin:55,wtsd:22,wsd:48} },
+  { key:'CALLING_STATION', name:'跟注站', color:'#f59e0b',
+    tip:'绝不诈唬！顶对以上加大尺度 75-100%，薄价值三街榨干。',
+    stats:{hands:700,vpip:40,pfr:10,wwsf:32,winRate:9,af:0.6,bb100:-10,
+           preflopWin:7,flopRate:25,flopWin:11,allinWin:40,wtsd:38,wsd:38} },
+  { key:'MANIAC', name:'疯狂玩家', color:'#ef4444',
+    tip:'强牌慢打等他自己送；扩大抓诈唬；别和空气大战。',
+    stats:{hands:400,vpip:55,pfr:45,wwsf:40,winRate:11,af:4.5,bb100:-5,
+           preflopWin:16,flopRate:75,flopWin:14,allinWin:45,wtsd:30,wsd:45} },
+  { key:'WINNER', name:'职业赢家', color:'#10b981',
+    tip:'放弃剥削，回到 GTO 基准；避免大底池，别在他身上硬找价值。',
+    stats:{hands:2000,vpip:24,pfr:20,wwsf:47,winRate:15,af:2.8,bb100:18,
+           preflopWin:11,flopRate:55,flopWin:20,allinWin:55,wtsd:25,wsd:56} },
+  { key:'EXPLOITABLE', name:'可剥削玩家', color:'#ff8c42',
+    tip:'摊牌率仅 12%：河牌大量诈唬（用带 A/K 的阻断牌），多加注反偷。',
+    stats:{hands:500,vpip:28,pfr:20,wwsf:35,winRate:10,af:1.5,bb100:-8,
+           preflopWin:9,flopRate:40,flopWin:14,allinWin:45,wtsd:12,wsd:45} },
+  { key:'SUPER_FISH', name:'散财鱼', color:'#f59e0b',
+    tip:'顶对以上加大下注 100% 底池，完全禁用诈唬，三街价值榨干。',
+    stats:{hands:400,vpip:48,pfr:8,wwsf:28,winRate:6,af:0.5,bb100:-25,
+           preflopWin:5,flopRate:20,flopWin:8,allinWin:35,wtsd:40,wsd:30} },
+  { key:'ROCK', name:'铁岩石', color:'#10b981',
+    tip:'疯狂偷盲；一旦被反抗立即弃牌（其摊牌胜率 62%+）。',
+    stats:{hands:900,vpip:14,pfr:10,wwsf:42,winRate:12,af:1.0,bb100:2,
+           preflopWin:8,flopRate:25,flopWin:15,allinWin:58,wtsd:20,wsd:62} },
+  { key:'UNKNOWN', name:'未知', color:'#888',
+    tip:'样本不足，按 GTO 基准打，别做激进偏离。', stats:emptyStats() }
+];
+
+function classifyOpponent(stats){
+  if(!stats) return { type:'UNKNOWN', name:'未知', color:'#888', tip:'样本不足，按 GTO 基准打' };
+  if(stats.presetKey){
+    const pre = OPP_TYPE_PRESETS.find(x => x.key === stats.presetKey);
+    if(pre) return { type:pre.key, name:pre.name, color:pre.color, tip:pre.tip };
+  }
+  if(stats.hands === 0 || (stats.vpip === 0 && stats.af === 0)){
+    return { type:'UNKNOWN', name:'未知', color:'#888', tip:'样本不足，按 GTO 基准打' };
+  }
+  const v = stats.vpip || 0, p = stats.pfr || 0, af = stats.af || 0;
+  const wwsf = stats.wwsf || 0, bb100 = stats.bb100 || 0, wtsd = stats.wtsd || 0;
+  const wsd = stats.wsd || 0, allinWin = stats.allinWin || 0, flopRate = stats.flopRate || 0;
+  if(bb100 >= 15) return { type:'WINNER', name:'职业级赢家', color:'#10b981', tip:'对手在赚钱；放弃剥削，回到 GTO 基准，避免大底池' };
+  if(bb100 <= -15 && wwsf < 30) return { type:'SUPER_FISH', name:'超级散财', color:'#f59e0b', tip:'顶对以上加大下注100%底池，完全禁用诈唬，三街价值榨干' };
+  if(v >= 45 && af >= 3) return { type:'MANIAC', name:'疯狂玩家', color:'#ef4444', tip:'强牌慢打等他自己送；扩大抓诈唬；别和空气大战' };
+  if(v >= 35 && p <= 15){
+    if(wtsd >= 35 || wsd <= 40) return { type:'STATION', name:'铁跟注站', color:'#f59e0b', tip:'绝不诈唬！顶对以上加大尺度75-100%，薄价值三街' };
+    return { type:'FISH', name:'跟注站', color:'#f59e0b', tip:'扩大价值下注60-80%，减少复杂诈唬' };
+  }
+  if(v <= 18 && p <= 12){
+    if(wsd >= 60) return { type:'NIT_ROCK', name:'铁岩石', color:'#10b981', tip:'疯狂偷盲；一旦被反抗立即弃牌（摊牌胜率60%+）' };
+    return { type:'NIT', name:'紧弱岩石', color:'#10b981', tip:'偷盲+小注cbet 33%；河牌诈唬，面对反抗弃牌' };
+  }
+  if(v >= 30 && p >= 25){
+    if(allinWin >= 55) return { type:'LAG_KILLER', name:'全下狠人', color:'#a78bfa', tip:'全下胜率55%+，只用两对以上和他全下；别用边缘牌冒险' };
+    if(wwsf >= 45) return { type:'LAG_GOOD', name:'技术型松凶', color:'#a78bfa', tip:'收紧范围，强牌慢打诱导；扩宽抓诈唬但要有阻断牌' };
+    return { type:'LAG', name:'松凶玩家', color:'#a78bfa', tip:'让他继续下注，强牌不过早赶走；扩大价值跟注范围' };
+  }
+  if(wsd >= 55) return { type:'TAG_STRONG', name:'摊牌收割机', color:'#3b82f6', tip:'摊牌胜率55%+；避免与他大底池碰撞，用位置优势对抗' };
+  if(flopRate >= 55 && af >= 2) return { type:'AGGRO_TAG', name:'高cbet紧凶', color:'#3b82f6', tip:'他翻牌率55%+；用加注反偷，等他check后大注' };
+  if(wtsd <= 15 && v >= 25) return { type:'FOLDER', name:'易弃牌', color:'#10b981', tip:'他摊牌率仅15%；河牌大量诈唬（用带A/K的阻断牌）' };
+  return { type:'TAG', name:'紧凶玩家', color:'#3b82f6', tip:'尊重强范围，利用位置，对其过度弃牌施压' };
+}
+
+function round1(x){ return Math.round(x*10)/10; }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ==================================================================
+   牌力评估 + 蒙特卡洛（前端本地计算）
+   ================================================================== */
+const RANK_VAL = {A:14,K:13,Q:12,J:11,T:10,'9':9,'8':8,'7':7,'6':6,'5':5,'4':4,'3':3,'2':2};
+const CAT_NAMES = ['高牌','一对','两对','三条','顺子','同花','葫芦','四条','同花顺'];
+
+function eval5(cards){
+  const vals = cards.map(c=>RANK_VAL[c.rank]).sort((a,b)=>b-a);
+  const suits = cards.map(c=>c.suit);
+  const flush = suits.every(s=>s===suits[0]);
+  const counts = {};
+  vals.forEach(v=>counts[v]=(counts[v]||0)+1);
+  const groups = Object.keys(counts).map(k=>[parseInt(k),counts[k]]).sort((a,b)=> b[1]-a[1] || b[0]-a[0]);
+  const uniq = [...new Set(vals)].sort((a,b)=>b-a);
+  let straightHigh = 0;
+  if(uniq.length === 5){
+    if(uniq[0]-uniq[4] === 4) straightHigh = uniq[0];
+    else if(uniq[0]===14 && uniq[1]===5 && uniq[4]===2) straightHigh = 5;
+  }
+  if(flush && straightHigh) return [8, straightHigh];
+  if(groups[0][1]===4) return [7, groups[0][0], groups[1][0]];
+  if(groups[0][1]===3 && groups[1][1]===2) return [6, groups[0][0], groups[1][0]];
+  if(flush) return [5, ...vals];
+  if(straightHigh) return [4, straightHigh];
+  if(groups[0][1]===3) return [3, groups[0][0], groups[1][0], groups[2][0]];
+  if(groups[0][1]===2 && groups[1][1]===2) return [2, groups[0][0], groups[1][0], groups[2][0]];
+  if(groups[0][1]===2) return [1, groups[0][0], groups[1][0], groups[2][0], groups[3][0]];
+  return [0, ...vals];
+}
+
+const C75 = (() => {
+  const res = [];
+  for(let a=0;a<3;a++) for(let b=a+1;b<4;b++) for(let c=b+1;c<5;c++) for(let d=c+1;d<6;d++) for(let e=d+1;e<7;e++) res.push([a,b,c,d,e]);
+  return res;
+})();
+
+function evaluate7(cards){
+  if(!cards || cards.length < 5) return [-1];
+  let best = null;
+  for(const idx of C75){
+    const k = eval5(idx.map(i=>cards[i]));
+    if(!best || compareKeys(k, best) > 0) best = k;
+  }
+  return best || [-1];
+}
+
+function compareKeys(a, b){
+  const n = Math.max(a.length, b.length);
+  for(let i=0;i<n;i++){
+    const x = a[i]||0, y = b[i]||0;
+    if(x !== y) return x - y;
+  }
+  return 0;
+}
+
+/* ============ 前端蒙特卡洛胜率计算 ============ */
+const FULL_DECK = [];
+for(const s of ['s','h','d','c']) for(const r of ['A','K','Q','J','T','9','8','7','6','5','4','3','2']) FULL_DECK.push({rank:r, suit:s});
+
+function monteCarloEquity(hero, board, numOpp, sims){
+  // hero, board: [{rank, suit}]
+  const usedKeys = new Set();
+  hero.forEach(c=>usedKeys.add(c.rank+c.suit));
+  board.forEach(c=>usedKeys.add(c.rank+c.suit));
+  const avail = FULL_DECK.filter(c=>!usedKeys.has(c.rank+c.suit));
+
+  let wins = 0, ties = 0;
+  const totalSims = sims || 2000;
+  const boardNeed = 5 - board.length;
+
+  for(let i=0;i<totalSims;i++){
+    // 洗牌（Fisher-Yates 仅部分）
+    const pool = avail.slice();
+    // 取需要数目的牌
+    const needed = numOpp * 2 + boardNeed;
+    for(let j=0;j<needed;j++){
+      const k = j + Math.floor(Math.random() * (pool.length - j));
+      [pool[j], pool[k]] = [pool[k], pool[j]];
+    }
+    const oppHands = [];
+    let idx = 0;
+    for(let o=0;o<numOpp;o++){
+      oppHands.push([pool[idx], pool[idx+1]]); idx+=2;
+    }
+    const extraBoard = pool.slice(idx, idx + boardNeed);
+    const fullBoard = board.concat(extraBoard);
+    const myKey = evaluate7(hero.concat(fullBoard));
+    let bestOppKey = null;
+    let tieCount = 0;
+    for(const oh of oppHands){
+      const ok = evaluate7(oh.concat(fullBoard));
+      if(!bestOppKey || compareKeys(ok, bestOppKey) > 0){
+        bestOppKey = ok; tieCount = 1;
+      } else if(compareKeys(ok, bestOppKey) === 0){
+        tieCount++;
+      }
+    }
+    if(!bestOppKey){ wins++; continue; }
+    const cmp = compareKeys(myKey, bestOppKey);
+    if(cmp > 0) wins++;
+    else if(cmp === 0) ties++;
+  }
+  return ((wins + ties * 0.5) / totalSims) * 100;
+}
+
+function calcEquityLocal(hero, board, numOpp, pot, toCall){
+  // hero/board 为 "As","Kh" 字符串
+  const heroCards = hero.map(c=>({rank: c[0].toUpperCase()==='1'?'T':c[0].toUpperCase(), suit: c[1].toLowerCase()}));
+  const boardCards = board.map(c=>({rank: c[0].toUpperCase()==='1'?'T':c[0].toUpperCase(), suit: c[1].toLowerCase()}));
+  const sims = numOpp === 1 && board.length >= 3 ? 1500 : 2000;
+  const equityPct = monteCarloEquity(heroCards, boardCards, numOpp, sims);
+  const equity = equityPct / 100;
+  const potOdds = (pot + toCall) > 0 ? toCall / (pot + toCall) : 0;
+  const evCall = equity * pot - (1 - equity) * toCall;
+  return {
+    equity_pct: Math.round(equityPct * 10) / 10,
+    pot_odds_pct: Math.round(potOdds * 1000) / 10,
+    ev_call: Math.round(evCall * 100) / 100,
+    method: 'local-monte-carlo'
+  };
+}
+
+/* ==================================================================
+   页面逻辑
+   ================================================================== */
+const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+const SUITS = [{k:'s',y:'♠',c:'black'},{k:'h',y:'♥',c:'red'},{k:'d',y:'♦',c:'red'},{k:'c',y:'♣',c:'black'}];
+const SEAT_NAMES = ['玩家','座位1','座位2','座位3','座位4','座位5','座位6','座位7'];
+const PREFLOP_ORDER = ['UTG','UTG+1','MP','HJ','CO','BTN','SB','BB'];
+const ROLES_FROM_BTN = ['BTN','SB','BB','UTG','UTG+1','MP','HJ','CO'];
+let STACK = 40;
+
+let AUTO_ADVICE = true;
+let AI_RUNNING = false;
+let ADVICE_REQUEST_SEQ = 0;
+
+function makeDefaultOppStats(){
+  const o = {};
+  for(let i=1;i<8;i++) o[i] = emptyStats();
+  return o;
+}
+
+function setKeyStatus(text, color) {
+  const el = document.getElementById('keyStatus');
+  if (el) { el.textContent = text; el.style.color = color || '#a78bfa'; }
+}
+function loadApiKey() {
+  try {
+    const k = localStorage.getItem('deepseek_api_key') || '';
+    document.getElementById('apiKeyInput').value = k;
+    if (k) setKeyStatus('已读取 Key（' + k.length + ' 字符）', '#10b981');
+    else setKeyStatus('尚未保存 Key', '#888');
+  } catch(e) { setKeyStatus('localStorage 不可用', '#ef4444'); }
+}
+function saveApiKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) { setKeyStatus('❌ 输入框是空的', '#ef4444'); return; }
+  if (!k.startsWith('sk-')) { setKeyStatus('❌ Key 应以 sk- 开头', '#ef4444'); return; }
+  try {
+    localStorage.setItem('deepseek_api_key', k);
+    setKeyStatus('✅ 已保存 · 长度 ' + k.length, '#10b981');
+  } catch(e) { setKeyStatus('❌ 保存失败：' + e.message, '#ef4444'); }
+}
+function getApiKey() { try { return localStorage.getItem('deepseek_api_key') || ''; } catch(e) { return ''; } }
+
+function toggleAutoAdvice(){
+  AUTO_ADVICE = !AUTO_ADVICE;
+  const sw = document.getElementById('autoAdviceSwitch');
+  if(sw){
+    sw.classList.toggle('on', AUTO_ADVICE);
+    const txt = sw.querySelector('.txt');
+    if(txt) txt.textContent = '自动建议：' + (AUTO_ADVICE ? '开' : '关');
+  }
+  addLog('系统', '自动建议已' + (AUTO_ADVICE ? '开启' : '关闭'), 'info');
+}
+
+async function testApi() {
+  const key = getApiKey();
+  if (!key) { setKeyStatus('⚠️ 请先保存 API Key', '#ef4444'); return; }
+  setKeyStatus('⏳ 测试连接中...', '#a78bfa');
+  try {
+    const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({ model: 'deepseek-chat', messages: [{role:'user',content:'回复OK'}], max_tokens: 10 })
+    });
+    if (!resp.ok) {
+      const t = await resp.text();
+      setKeyStatus('❌ HTTP ' + resp.status + ' · ' + t.slice(0,100), '#ef4444');
+      return;
+    }
+    const data = await resp.json();
+    setKeyStatus('✅ 连接成功！', '#10b981');
+  } catch (e) { setKeyStatus('❌ 请求异常：' + e.message, '#ef4444'); }
+}
+
+let G = {
+  dealerSeat:null, roles:{}, roleToSeat:{}, players:{},
+  street:'preflop', pot:0, currentBet:0, lastRaiseSize:1,
+  actorIdx:0, actionsLeft:0, lastAggressor:null,
+  communityCards:[], pickMode:null, cardsToPick:0,
+  tempHand:[], tempPickedCards:[], handCount:0, actionHistory:[],
+  preflopRaiser:null,
+  seatActive:{0:true,1:true,2:true,3:true,4:true,5:true,6:true,7:true},
+  sbSize:0.5, bbSize:1, straddleSize:0, anteSize:0, straddleSeat:-1,
+  waitingForHero:false,
+  oppStats: makeDefaultOppStats(),
+  stackBySeat: {},
+  showdownRevealed: false,
+  autoTrack: {
+    1:{h:0,vpip:0,pfr:0,aggr:0,calls:0}, 2:{h:0,vpip:0,pfr:0,aggr:0,calls:0},
+    3:{h:0,vpip:0,pfr:0,aggr:0,calls:0}, 4:{h:0,vpip:0,pfr:0,aggr:0,calls:0},
+    5:{h:0,vpip:0,pfr:0,aggr:0,calls:0}, 6:{h:0,vpip:0,pfr:0,aggr:0,calls:0},
+    7:{h:0,vpip:0,pfr:0,aggr:0,calls:0}
+  }
+};
+let currentDeck = [];
+
+function adjustTableScale() {
+  const wrap = document.getElementById('tableWrap');
+  if(!wrap) return;
+  const screenW = window.innerWidth;
+  const screenH = window.innerHeight;
+  const availW = screenW - 24;
+  const isLandscape = screenW > screenH;
+  const targetW = isLandscape ? Math.min(availW, 900) : Math.min(availW, 720);
+  const scale = Math.min(1, targetW / 860);
+  wrap.style.transform = `scale(${scale})`;
+  wrap.style.marginBottom = `${(scale - 1) * 540}px`;
+}
+window.addEventListener('resize', adjustTableScale);
+window.addEventListener('orientationchange', () => setTimeout(adjustTableScale, 100));
+
+function toggleOppDrawer(){
+  document.getElementById('oppDrawer').classList.toggle('open');
+}
+function toggleDetailTable(){
+  document.getElementById('oppDetailWrap').classList.toggle('open');
+}
+
+function renderStack(seatIdx){
+  const el = document.getElementById('stackInput-' + seatIdx);
+  if(!el) return;
+  if(document.activeElement === el) return;
+  let v = G.stackBySeat[seatIdx];
+  if(v === undefined){
+    v = (G.players[seatIdx] && G.players[seatIdx].stack !== undefined) ? G.players[seatIdx].stack : STACK;
+  }
+  el.value = Number(v).toFixed(1);
+}
+function renderAllStacks(){ for(let i=0;i<8;i++) renderStack(i); }
+
+function onStackInputChange(seatIdx, val){
+  const v = parseFloat(val);
+  if(isNaN(v) || v < 0){ renderStack(seatIdx); return; }
+  G.stackBySeat[seatIdx] = round1(v);
+  if(G.players[seatIdx]) G.players[seatIdx].stack = round1(v);
+  renderStack(seatIdx);
+}
+function takeFromStack(seatIdx, amount){
+  const p = G.players[seatIdx];
+  if(!p || !(amount > 0)) return;
+  p.stack = Math.max(0, round1(p.stack - amount));
+  G.stackBySeat[seatIdx] = p.stack;
+  renderStack(seatIdx);
+}
+function awardPot(winners){
+  if(!winners || winners.length === 0 || G.pot <= 0) return;
+  const total = G.pot;
+  const share = round1(total / winners.length);
+  winners.forEach(s=>{
+    const p = G.players[s];
+    const cur = (p && p.stack !== undefined) ? p.stack : (G.stackBySeat[s] || 0);
+    if(p) p.stack = round1(cur + share);
+    G.stackBySeat[s] = (p ? p.stack : round1(cur + share));
+    renderStack(s);
+  });
+  addLog('系统', `${winners.map(s=>SEAT_NAMES[s]).join('、')} 赢得底池 ${total.toFixed(1)} BB`, 'info');
+  G.pot = 0;
+  updateUI();
+}
+function getLastStanding(){
+  for(let i=0;i<8;i++){
+    const p = G.players[i];
+    if(G.seatActive[i] && p && !p.folded) return i;
+  }
+  return -1;
+}
+function drawCard(used){
+  const deck = [];
+  for(const s of SUITS) for(const r of RANKS) deck.push({rank:r, suit:s.k, sym:s.y, color:s.c});
+  const avail = deck.filter(c => !used.has(c.rank + c.suit));
+  if(avail.length === 0) return null;
+  const c = avail[Math.floor(Math.random()*avail.length)];
+  used.add(c.rank + c.suit);
+  return c;
+}
+function dealMissingHands(){
+  const used = new Set();
+  (G.players[0] ? G.players[0].hand : []).forEach(c=>used.add(c.rank+c.suit));
+  G.communityCards.forEach(c=>used.add(c.rank+c.suit));
+  for(let i=1;i<8;i++){
+    const p = G.players[i];
+    if(!G.seatActive[i] || !p || p.folded) continue;
+    if(p.hand && p.hand.length === 2){ p.hand.forEach(c=>used.add(c.rank+c.suit)); continue; }
+    p.hand = [];
+    for(let k=0;k<2;k++){ const c = drawCard(used); if(c) p.hand.push(c); }
+  }
+}
+function getActiveSeats(){ return Object.keys(G.seatActive).filter(s=>G.seatActive[s]).map(Number); }
+function assignRoles(){
+  if(G.dealerSeat===null||G.dealerSeat===undefined) return;
+  const activeSeats=getActiveSeats(); const numActive=activeSeats.length;
+  if(numActive<2) return;
+  let roleOrder;
+  if(numActive===2) roleOrder=['BTN','BB'];
+  else if(numActive===3) roleOrder=['BTN','SB','BB'];
+  else if(numActive===4) roleOrder=['BTN','SB','BB','UTG'];
+  else if(numActive===5) roleOrder=['BTN','SB','BB','UTG','UTG+1'];
+  else if(numActive===6) roleOrder=['BTN','SB','BB','UTG','UTG+1','MP'];
+  else if(numActive===7) roleOrder=['BTN','SB','BB','UTG','UTG+1','MP','HJ'];
+  else roleOrder=ROLES_FROM_BTN.slice();
+  G.roles={}; G.roleToSeat={};
+  const btnIdx=activeSeats.indexOf(G.dealerSeat);
+  if(btnIdx===-1) return;
+  for(let i=0;i<numActive;i++){ const seat=activeSeats[(btnIdx+i)%numActive]; const role=roleOrder[i]; G.roles[seat]=role; G.roleToSeat[role]=seat; }
+  for(let i=0;i<8;i++){ const el=document.getElementById('role-'+i); if(el) el.textContent=G.roles[i]||'—'; }
+  renderOppTypeGrid();
+}
+function toggleSeatActive(seat){
+  if(seat===0) return;
+  G.seatActive[seat]=!G.seatActive[seat];
+  const el=document.getElementById('seat-'+seat);
+  if(el){ el.classList.toggle('inactive-seat',!G.seatActive[seat]); const t=el.querySelector('.seat-toggle'); if(t) t.textContent=G.seatActive[seat]?'✕':'✓'; }
+  if(G.dealerSeat!==null) assignRoles();
+  renderOppPanel();
+}
+function initDeck(){ const d=[]; for(const s of SUITS) for(const r of RANKS) d.push({rank:r,suit:s.k,sym:s.y,color:s.c}); return d.sort(()=>Math.random()-0.5); }
+
+function startNewHand(){
+  if(G.dealerSeat===null||G.dealerSeat===undefined){ alert('请先选择庄位！'); return; }
+  STACK=parseFloat(document.getElementById('chipInput').value)||40;
+  G.sbSize=parseFloat(document.getElementById('sbInput').value);
+  G.bbSize=parseFloat(document.getElementById('bbInput').value);
+  G.straddleSize=parseFloat(document.getElementById('straddleInput').value);
+  G.anteSize=parseFloat(document.getElementById('anteInput').value);
+  if(!(G.sbSize>=0)) G.sbSize=0.5; if(!(G.bbSize>0)) G.bbSize=1;
+  if(!(G.straddleSize>=0)) G.straddleSize=0; if(!(G.anteSize>=0)) G.anteSize=0;
+  const activeSeats=getActiveSeats();
+  if(activeSeats.length<2){ alert('至少需要2个活跃座位！'); return; }
+  if(!activeSeats.includes(G.dealerSeat)) G.dealerSeat=activeSeats[0];
+  assignRoles();
+
+  if(G.handCount === 0){
+    for(let i=0;i<8;i++) G.stackBySeat[i] = STACK;
+  }
+
+  for(let i=0;i<8;i++){
+    if(G.stackBySeat[i] === undefined) G.stackBySeat[i] = STACK;
+    G.players[i] = {
+      hand:[], folded:!activeSeats.includes(i), committed:0, acted:false, isHuman:i===0,
+      stack: G.stackBySeat[i]
+    };
+  }
+  for(let i=1;i<8;i++) if(G.seatActive[i]) G.autoTrack[i].h++;
+
+  G.street='preflop'; G.communityCards=[]; G.lastAggressor=null; G.handCount++;
+  G.actionHistory=[]; G.preflopRaiser=null; G.lastRaiseSize=G.bbSize;
+  G.showdownRevealed=false;
+  currentDeck=initDeck();
+
+  let potStart = 0;
+  if(G.anteSize > 0){
+    for(const s of activeSeats){ takeFromStack(s, G.anteSize); potStart += G.anteSize; }
+  }
+  const sbSeat=G.roleToSeat['SB'], bbSeat=G.roleToSeat['BB'];
+  if(sbSeat!==undefined){ G.players[sbSeat].committed=G.sbSize; takeFromStack(sbSeat, G.sbSize); }
+  if(bbSeat!==undefined){ G.players[bbSeat].committed=G.bbSize; takeFromStack(bbSeat, G.bbSize); }
+  G.straddleSeat=-1;
+  if(G.straddleSize>0){
+    const utgSeat=G.roleToSeat['UTG'];
+    if(utgSeat!==undefined&&!G.players[utgSeat].folded){
+      G.players[utgSeat].committed=G.straddleSize; takeFromStack(utgSeat, G.straddleSize); G.straddleSeat=utgSeat;
+    }
+  }
+  G.currentBet=G.straddleSeat>=0?G.straddleSize:G.bbSize;
+  G.pot=round1(potStart+G.sbSize+G.bbSize+(G.straddleSeat>=0?G.straddleSize:0));
+
+  let startIdx=G.straddleSeat>=0?1:0; let foundStart=false;
+  for(let i=startIdx;i<PREFLOP_ORDER.length;i++){ const seat=G.roleToSeat[PREFLOP_ORDER[i]]; if(seat!==undefined&&!G.players[seat].folded){ G.actorIdx=seat; foundStart=true; break; } }
+  if(!foundStart) for(const s of activeSeats){ G.actorIdx=s; break; }
+  G.actionsLeft=activeSeats.length;
+  G.pickMode=null; G.tempHand=[]; G.tempPickedCards=[]; G.cardsToPick=0;
+  G.waitingForHero=false;
+  document.getElementById('streetLabel').textContent='翻牌前';
+  document.getElementById('potDisplay').textContent='底池: '+G.pot.toFixed(1)+' BB';
+  document.getElementById('communityCards').innerHTML='';
+  document.getElementById('actionPanel').style.display='none';
+  document.getElementById('raiseArea').style.display='none';
+  closePicker();
+  document.getElementById('waitingOverlay').style.display='none';
+  document.getElementById('apInfo').textContent=''; document.getElementById('apTitle').textContent=''; document.getElementById('apGrid').innerHTML='';
+  document.getElementById('aiAdvice').style.display='none';
+  document.getElementById('aiTimer').textContent='';
+  document.getElementById('mathInfo').textContent='';
+  document.querySelectorAll('.seat-label').forEach(el=>{ el.style.display='none'; el.textContent=''; });
+  document.querySelectorAll('.seat').forEach(el=>el.classList.remove('active-seat','folded','my-seat'));
+  document.getElementById('seat-0').classList.add('my-seat');
+  addLog('系统',`===== 第 ${G.handCount} 手牌开始 =====`,'info');
+  updateUI();
+  nextActor();
+}
+function rotateAndStart(){
+  const activeSeats=getActiveSeats();
+  if(activeSeats.length<2){ alert('至少需要2个活跃座位！'); return; }
+  if(G.dealerSeat===null||G.dealerSeat===undefined||!activeSeats.includes(G.dealerSeat)) G.dealerSeat=activeSeats[0];
+  else { const idx=activeSeats.indexOf(G.dealerSeat); G.dealerSeat=activeSeats[(idx+1)%activeSeats.length]; }
+  document.getElementById('dealerSelect').value=G.dealerSeat;
+  startNewHand();
+}
+function onDealerChange(v){ G.dealerSeat=v===''?null:parseInt(v); assignRoles(); }
+
+function openPicker(){
+  document.getElementById('cardPicker').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closePicker(){
+  document.getElementById('cardPicker').classList.remove('open');
+  document.body.style.overflow = '';
+  if(G.pickMode === 'hand' && G.waitingForHero){
+    document.getElementById('waitingOverlay').style.display = 'block';
+  } else {
+    document.getElementById('waitingOverlay').style.display = 'none';
+  }
+}
+function renderCardPicker(mode){
+  const grid=document.getElementById('cardGrid'); grid.innerHTML='';
+  const total=mode==='hand'?2:G.cardsToPick;
+  const picked=mode==='hand'?G.tempHand.length:G.tempPickedCards.length;
+  document.getElementById('cardPickerTitle').textContent=
+    mode==='hand'?`请选择手牌（已选 ${picked}/${total}）`:`请选择公共牌（已选 ${picked}/${total}）`;
+  const used=[...(G.players[0]?G.players[0].hand:[]),...G.communityCards];
+  for(const s of SUITS){
+    const col=document.createElement('div'); col.className='picker-suit-col';
+    const hd=document.createElement('div'); hd.className='picker-suit-header '+(s.c==='red'?'red':'blk'); hd.textContent=s.y; col.appendChild(hd);
+    for(const r of RANKS){
+      const btn=document.createElement('button'); btn.className='picker-card-btn '+(s.c==='red'?'red':'blk'); btn.textContent=r+s.y;
+      const isUsed=used.some(c=>c.rank===r&&c.suit===s.k);
+      const alreadySel=[...G.tempHand,...G.tempPickedCards].some(c=>c.rank===r&&c.suit===s.k);
+      if(isUsed||alreadySel){ btn.disabled=true; btn.classList.add('selected'); }
+      btn.onclick=()=>pickCardFromUI(r,s.k); col.appendChild(btn);
+    }
+    grid.appendChild(col);
+  }
+  openPicker();
+}
+function pickCardFromUI(rank,suit){
+  const card=currentDeck.find(c=>c.rank===rank&&c.suit===suit); if(!card) return;
+  currentDeck=currentDeck.filter(c=>!(c.rank===rank&&c.suit===suit));
+  if(G.pickMode==='hand'){
+    G.tempHand.push(card);
+    if(G.tempHand.length===2){
+      G.players[0].hand=[...G.tempHand]; G.tempHand=[];
+      closePicker();
+      document.getElementById('waitingOverlay').style.display='none';
+      G.waitingForHero=false;
+      updateUI();
+      showActionPanel(0);
+    } else renderCardPicker('hand');
+  } else if(G.pickMode==='community'){
+    G.tempPickedCards.push(card);
+    if(G.tempPickedCards.length>=G.cardsToPick){
+      G.communityCards.push(...G.tempPickedCards); G.tempPickedCards=[];
+      closePicker();
+      afterBoardDetected();
+    } else renderCardPicker('community');
+  }
+}
+function activeCount(){ let n=0; for(let i=0;i<8;i++) if(G.seatActive[i]&&G.players[i]&&!G.players[i].folded) n++; return n; }
+function nextActor(){
+  if(G.actionsLeft<=0){ advanceStreet(); return; }
+  let count=0;
+  while(count<8){
+    const seatIdx=G.actorIdx;
+    const p=G.players[seatIdx];
+    if(G.seatActive[seatIdx]&&p&&!p.folded&&!p.acted){
+      if(seatIdx===0 && p.hand.length<2){
+        G.pickMode='hand';
+        G.waitingForHero=true;
+        document.getElementById('waitingOverlay').style.display='block';
+        document.getElementById('actionPanel').style.display='none';
+        renderCardPicker('hand');
+        return;
+      }
+      showActionPanel(seatIdx);
+      return;
+    }
+    G.actorIdx=(G.actorIdx+1)%8;
+    count++;
+  }
+  G.actionsLeft=0; advanceStreet();
+}
+function showActionPanel(seatIdx){
+  const panel=document.getElementById('actionPanel'); panel.style.display='block';
+  panel.classList.toggle('my-turn',seatIdx===0);
+  const role=G.roles[seatIdx]||'—';
+  document.getElementById('apTitle').textContent=`${SEAT_NAMES[seatIdx]} (${role}) 行动`;
+  const needToCall=G.currentBet-G.players[seatIdx].committed;
+  document.getElementById('apInfo').textContent=
+    (needToCall>0?`需要跟注 ${needToCall.toFixed(1)} BB`:'无人加注') +
+    ` ｜ 剩余 ${G.players[seatIdx].stack.toFixed(1)} BB`;
+  document.querySelectorAll('.seat-label').forEach(el=>{ el.style.display='none'; el.textContent=''; });
+  const grid=document.getElementById('apGrid'); grid.innerHTML='';
+  const bFold=document.createElement('button'); bFold.className='btn btn-fold'; bFold.textContent='弃牌'; bFold.onclick=()=>doAction(seatIdx,'fold'); grid.appendChild(bFold);
+  const bCheck=document.createElement('button'); bCheck.className='btn '+(needToCall>0?'btn-call':'btn-check'); bCheck.textContent=needToCall>0?`跟注 ${needToCall.toFixed(1)}`:'过牌'; bCheck.onclick=()=>doAction(seatIdx,needToCall>0?'call':'check'); grid.appendChild(bCheck);
+  const bRaise=document.createElement('button'); bRaise.className='btn btn-raise'; bRaise.textContent='加注/下注'; bRaise.onclick=()=>showRaiseArea(seatIdx); grid.appendChild(bRaise);
+  const bAllin=document.createElement('button'); bAllin.className='btn btn-allin'; bAllin.textContent='全下'; bAllin.onclick=()=>doAction(seatIdx,'allin'); grid.appendChild(bAllin);
+  document.querySelectorAll('.seat').forEach(el=>el.classList.remove('active-seat'));
+  const seatEl=document.getElementById('seat-'+seatIdx); if(seatEl) seatEl.classList.add('active-seat');
+
+  if(seatIdx === 0 && AUTO_ADVICE && G.players[0].hand.length >= 2){
+    if(AI_RUNNING){ ADVICE_REQUEST_SEQ++; }
+    setTimeout(() => { if(AUTO_ADVICE) getAIAdvice(false); }, 150);
+  }
+}
+function showRaiseArea(seatIdx){
+  const ra = document.getElementById('raiseArea');
+  ra.style.display = 'block';
+  const p = G.players[seatIdx];
+  const minTotal = round1(G.currentBet === 0 ? G.bbSize : G.currentBet + G.lastRaiseSize);
+  const maxTotal = round1(p.committed + p.stack);
+  const callAmt  = Math.max(G.currentBet - p.committed, 0);
+  const potNow   = G.pot;
+  const remain   = p.stack;
+  const inp = document.getElementById('raiseInput');
+  const startVal = Math.min(Math.max(minTotal, G.bbSize), Math.max(maxTotal, minTotal));
+  inp.value = startVal.toFixed(1);
+  inp.min = minTotal;
+  inp.max = maxTotal;
+  document.getElementById('raiseMinMax').textContent =
+    `最小 ${minTotal.toFixed(1)} BB ｜ 最大 ${maxTotal.toFixed(1)} BB ｜ 底池 ${potNow.toFixed(1)} BB`;
+  const presets = document.getElementById('raisePresets');
+  presets.innerHTML = '';
+  const list = [];
+  if (G.street === 'preflop') {
+    [2.5, 3, 4, 5].forEach(m => {
+      const v = round1(G.bbSize * m);
+      if (v >= minTotal && v <= maxTotal) list.push({ label: v.toFixed(1) + ' BB', amt: v });
+    });
+  }
+  [0.33, 0.5, 0.75, 1.0, 1.5].forEach(pc => {
+    let amt;
+    if (G.currentBet === 0) { amt = potNow * pc; }
+    else { amt = G.currentBet + (potNow + callAmt) * pc; }
+    amt = round1(amt);
+    if (amt < minTotal) amt = minTotal;
+    if (amt > maxTotal) amt = maxTotal;
+    list.push({ label: Math.round(pc * 100) + '% · ' + amt.toFixed(1), amt: amt });
+  });
+  list.push({ label: '全下 ' + maxTotal.toFixed(1), amt: maxTotal });
+  const seen = new Set();
+  list.forEach(item => {
+    const key = item.amt.toFixed(1);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const btn = document.createElement('button');
+    btn.className = 'raise-preset-btn';
+    btn.textContent = item.label;
+    btn.onclick = () => { inp.value = item.amt.toFixed(1); };
+    presets.appendChild(btn);
+  });
+}
+function confirmRaise(){ doAction(G.actorIdx,'raise'); }
+function doAction(seatIdx,action){
+  const p=G.players[seatIdx];
+  const needToCall=Math.max(G.currentBet-p.committed, 0);
+  document.getElementById('actionPanel').style.display='none';
+  document.getElementById('raiseArea').style.display='none';
+  document.querySelectorAll('.seat').forEach(el=>el.classList.remove('active-seat'));
+  document.querySelectorAll('.seat-label').forEach(el=>{ el.style.display='none'; el.textContent=''; });
+  G.actionHistory.push({seat:seatIdx,action:action,street:G.street,amount:null});
+  trackOpponentAction(seatIdx, action);
+
+  if(action==='raise'||action==='allin'){
+    if(G.street==='preflop') G.preflopRaiser=seatIdx;
+    G.lastAggressor=seatIdx;
+    const maxTotal = round1(p.committed + p.stack);
+    let amt;
+    if(action==='allin'){ amt = maxTotal; }
+    else {
+      amt = parseFloat(document.getElementById('raiseInput').value);
+      const minTotal = G.currentBet===0 ? G.bbSize : G.currentBet + G.lastRaiseSize;
+      if(isNaN(amt) || amt < minTotal) amt = minTotal;
+      if(amt > maxTotal) amt = maxTotal;
+    }
+    amt = round1(amt);
+    const added = Math.max(round1(amt - p.committed), 0);
+    takeFromStack(seatIdx, added);
+    G.lastRaiseSize = Math.max(amt - G.currentBet, G.bbSize);
+    p.committed = amt;
+    G.pot = round1(G.pot + added);
+    G.currentBet = amt;
+    G.actionHistory[G.actionHistory.length-1].amount=amt;
+    for(let i=0;i<8;i++) if(i!==seatIdx&&G.players[i]&&!G.players[i].folded) G.players[i].acted=false;
+    G.actionsLeft=activeCount()-1;
+    addLog(seatIdx,(action==='allin'?'全下 ':'加注到 ')+amt.toFixed(1)+' BB','raise'); p.acted=true;
+  } else if(action==='fold'){
+    p.folded=true; addLog(seatIdx,'弃牌','fold'); G.actionsLeft--; p.acted=true;
+  } else if(action==='check'){
+    addLog(seatIdx,'过牌','check'); G.actionsLeft--; p.acted=true;
+  } else if(action==='call'){
+    const pay = Math.min(needToCall, p.stack);
+    takeFromStack(seatIdx, pay);
+    p.committed = round1(p.committed + pay);
+    G.pot = round1(G.pot + pay);
+    addLog(seatIdx,`跟注 ${pay.toFixed(1)} BB`,'call'); G.actionsLeft--; p.acted=true;
+  }
+  updateUI(); G.actorIdx=(G.actorIdx+1)%8;
+  if(activeCount()<=1){ G.actionsLeft=0; advanceStreet(); return; }
+  nextActor();
+}
+function trackOpponentAction(seatIdx, action){
+  if(seatIdx === 0) return;
+  const t = G.autoTrack[seatIdx];
+  if(!t) return;
+  if(action === 'call'){ t.calls++; if(G.street==='preflop') t.vpip++; }
+  else if(action === 'raise' || action === 'allin'){ t.aggr++; if(G.street==='preflop'){ t.vpip++; t.pfr++; } }
+}
+function advanceStreet(){
+  document.getElementById('actionPanel').style.display='none';
+  document.querySelectorAll('.seat').forEach(el=>el.classList.remove('active-seat'));
+  document.querySelectorAll('.seat-label').forEach(el=>{ el.style.display='none'; el.textContent=''; });
+  const activePlayers=activeCount();
+
+  if(activePlayers<=1){
+    const w = getLastStanding();
+    document.getElementById('streetLabel').textContent='牌局结束';
+    addLog('系统','其余玩家全部弃牌','info');
+    if(w>=0) awardPot([w]);
+    return;
+  }
+
+  for(let i=0;i<8;i++) if(G.players[i]){ G.players[i].acted=false; G.players[i].committed=0; }
+  G.currentBet=0; G.lastRaiseSize=G.bbSize; G.lastAggressor=null;
+
+  if(G.street==='preflop'){
+    G.street='flop'; G.pickMode='community'; G.cardsToPick=3; G.tempPickedCards=[];
+    document.getElementById('streetLabel').textContent='翻牌';
+    addLog('系统','--- 翻牌 ---','info');
+    renderCardPicker('community');
+  }
+  else if(G.street==='flop'){
+    G.street='turn'; G.pickMode='community'; G.cardsToPick=1; G.tempPickedCards=[];
+    document.getElementById('streetLabel').textContent='转牌';
+    addLog('系统','--- 转牌 ---','info');
+    renderCardPicker('community');
+  }
+  else if(G.street==='turn'){
+    G.street='river'; G.pickMode='community'; G.cardsToPick=1; G.tempPickedCards=[];
+    document.getElementById('streetLabel').textContent='河牌';
+    addLog('系统','--- 河牌 ---','info');
+    renderCardPicker('community');
+  }
+  else {
+    document.getElementById('streetLabel').textContent='摊牌！';
+    addLog('系统','--- 摊牌 ---','info');
+    resolveShowdown();
+  }
+}
+function afterBoardDetected(){
+    closePicker();
+    renderCommunity();
+    G.currentBet=0; G.lastRaiseSize=G.bbSize; G.lastAggressor=null;
+    for(let i=0;i<8;i++) if(G.players[i]){ G.players[i].acted=false; G.players[i].committed=0; }
+    let startSeat=G.roleToSeat['SB'];
+    const postOrder=['SB','BB','UTG','UTG+1','MP','HJ','CO','BTN'];
+    if(startSeat===undefined||!G.seatActive[startSeat]||G.players[startSeat].folded){
+        startSeat=-1;
+        for(const role of postOrder){
+            const seat=G.roleToSeat[role];
+            if(seat!==undefined&&G.seatActive[seat]&&!G.players[seat].folded){ startSeat=seat; break; }
+        }
+    }
+    if(startSeat>=0) G.actorIdx=startSeat;
+    G.actionsLeft=activeCount(); updateUI(); nextActor();
+}
+function resolveShowdown(){
+  dealMissingHands();
+  revealAllHands();
+  const contenders = [];
+  for(let i=0;i<8;i++){
+    const p = G.players[i];
+    if(!G.seatActive[i] || !p || p.folded) continue;
+    if(!p.hand || p.hand.length < 2) continue;
+    const key = evaluate7([...p.hand, ...G.communityCards]);
+    contenders.push({ seat:i, key });
+  }
+  if(contenders.length === 0) return;
+  contenders.forEach(c=>{ addLog(c.seat, `牌型：${CAT_NAMES[c.key[0]] || '未知'}`, 'info'); });
+  contenders.sort((a,b)=> compareKeys(b.key, a.key));
+  const best = contenders[0].key;
+  const winners = contenders.filter(c => compareKeys(c.key, best) === 0).map(c => c.seat);
+  awardPot(winners);
+}
+function revealAllHands(){
+  G.showdownRevealed = true;
+  for(let i=0;i<8;i++){
+    const p = G.players[i];
+    if(!G.seatActive[i] || !p || p.folded) continue;
+    const container = document.getElementById('cards-'+i);
+    if(!container) continue;
+    container.innerHTML = '';
+    if(p.hand && p.hand.length > 0){
+      p.hand.forEach(c => container.appendChild(makeCardElement(c, true)));
+      addLog(i, `手牌: ${p.hand.map(c=>c.rank+c.sym).join(' ')}`, 'info');
+    }
+  }
+}
+function renderCommunity(){ const cc=document.getElementById('communityCards'); cc.innerHTML=''; G.communityCards.forEach(c=>cc.appendChild(makeCardElement(c,false))); }
+function makeCardElement(c,mini){
+  const div=document.createElement('div'); div.className='poker-card '+c.color+(mini?' mini':'');
+  div.innerHTML=`<div class="card-corner corner-tl"><span class="card-rank">${c.rank}</span><span class="card-suit">${c.sym}</span></div><div class="card-center">${c.sym}</div><div class="card-corner corner-br"><span class="card-rank">${c.rank}</span><span class="card-suit">${c.sym}</span></div>`;
+  return div;
+}
+function updateUI(){
+  for(let i=0;i<8;i++){
+    const seatEl=document.getElementById('seat-'+i); if(!seatEl) continue;
+    seatEl.classList.toggle('my-seat',i===0);
+    seatEl.classList.toggle('inactive-seat',!G.seatActive[i]&&i!==0);
+    const p=G.players[i]; if(p) seatEl.classList.toggle('folded',p.folded);
+    const cardsEl=document.getElementById('cards-'+i); cardsEl.innerHTML='';
+    if(p&&p.hand.length>0){
+      if(i===0){ p.hand.forEach(c=>cardsEl.appendChild(makeCardElement(c,true))); }
+      else if(G.showdownRevealed && !p.folded){ p.hand.forEach(c=>cardsEl.appendChild(makeCardElement(c,true))); }
+      else if(!p.folded){ for(let j=0;j<2;j++){ const back=document.createElement('div'); back.className='poker-card mini back'; cardsEl.appendChild(back); } }
+    }
+    else if(p&&!p.folded&&G.seatActive[i]&&i!==0){
+      for(let j=0;j<2;j++){ const back=document.createElement('div'); back.className='poker-card mini back'; cardsEl.appendChild(back); }
+    }
+  }
+  document.getElementById('potDisplay').textContent=`底池: ${G.pot.toFixed(1)} BB`;
+  renderAllStacks();
+}
+function addLog(seatIdx,text,type){
+  const log=document.getElementById('actionLog'); log.style.display='block';
+  const div=document.createElement('div'); div.className='log-'+type;
+  div.textContent=seatIdx==='系统'?text:`[${SEAT_NAMES[seatIdx]} (${G.roles[seatIdx]||'—'})] ${text}`;
+  log.prepend(div);
+}
+function clickSeat(seatIdx){}
+
+const OPP_FIELDS = [
+  {key:'hands',label:'手数',min:0,max:99999,step:1,w:40},
+  {key:'vpip',label:'VPIP%',min:0,max:100,step:1,w:40},
+  {key:'pfr',label:'PFR%',min:0,max:100,step:1,w:40},
+  {key:'wwsf',label:'入池胜率',min:0,max:100,step:1,w:42},
+  {key:'winRate',label:'每手胜率',min:0,max:100,step:1,w:42},
+  {key:'af',label:'AF',min:0,max:20,step:0.1,w:40},
+  {key:'bb100',label:'bb/100',min:-200,max:200,step:1,w:46},
+  {key:'preflopWin',label:'翻前胜',min:0,max:100,step:1,w:42},
+  {key:'flopRate',label:'翻牌率',min:0,max:100,step:1,w:42},
+  {key:'flopWin',label:'翻牌胜',min:0,max:100,step:1,w:42},
+  {key:'allinWin',label:'AllIn胜',min:0,max:100,step:1,w:42},
+  {key:'wtsd',label:'摊牌率',min:0,max:100,step:1,w:42},
+  {key:'wsd',label:'摊牌胜',min:0,max:100,step:1,w:42}
+];
+
+function renderOppPanel(){ renderOppTypeGrid(); renderOppTable(); }
+
+function renderOppTypeGrid(){
+  const wrap = document.getElementById('oppTypeGrid');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  for(let i = 1; i < 8; i++){
+    const st = G.oppStats[i] || emptyStats();
+    const info = classifyOpponent(st);
+    const card = document.createElement('div');
+    card.className = 'opp-type-card' + (G.seatActive[i] ? '' : ' opp-card-inactive');
+    let tags = '';
+    for(const pre of OPP_TYPE_PRESETS){
+      const sel = st.presetKey === pre.key;
+      const style = sel
+        ? `background:${pre.color};color:#000;border-color:${pre.color};`
+        : `color:${pre.color};border-color:${pre.color}66;`;
+      tags += `<span class="type-tag${sel?' selected':''}" style="${style}" onclick="setOppType(${i},'${pre.key}')">${pre.name}</span>`;
+    }
+    card.innerHTML = `
+      <div class="opp-card-head">
+        <span class="opp-seat-name">座位${i}</span>
+        <span class="opp-role-name">${G.roles[i]||'—'}</span>
+        <span class="opp-type-badge" style="background:${info.color}22;color:${info.color};border:1px solid ${info.color}66;">${info.name}</span>
+      </div>
+      <div class="opp-type-tags">${tags}</div>
+      <div class="opp-card-tip">💡 ${info.tip}</div>
+    `;
+    wrap.appendChild(card);
+  }
+}
+function setOppType(seat, key){
+  const pre = OPP_TYPE_PRESETS.find(p => p.key === key);
+  if(!pre) return;
+  G.oppStats[seat] = Object.assign(emptyStats(), pre.stats, { presetKey: key });
+  renderOppPanel();
+  addLog('系统', `座位${seat} 已设为【${pre.name}】`, 'info');
+}
+function renderOppTable(){
+  const tbody = document.getElementById('oppTableBody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  for(let i = 1; i < 8; i++){
+    const st = G.oppStats[i] || emptyStats();
+    const info = classifyOpponent(st);
+    const tr = document.createElement('tr');
+    if(!G.seatActive[i]) tr.className = 'opp-row-inactive';
+    let html = `<td class="opp-seat-cell">座位${i}</td>`;
+    for(const f of OPP_FIELDS){
+      const val = st[f.key] || 0;
+      html += `<td><input type="number" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" data-seat="${i}" data-field="${f.key}" style="width:${f.w}px"></td>`;
+    }
+    html += `<td><span class="opp-type-badge" style="background:${info.color}22;color:${info.color};border:1px solid ${info.color}66;">${info.name}</span></td>`;
+    html += `<td class="opp-tip">${info.tip}</td>`;
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  }
+  tbody.querySelectorAll('input').forEach(inp => inp.addEventListener('input', onOppInputChange));
+}
+function onOppInputChange(e){
+  const seat = parseInt(e.target.dataset.seat);
+  const field = e.target.dataset.field;
+  const val = parseFloat(e.target.value) || 0;
+  if(!G.oppStats[seat]) G.oppStats[seat] = emptyStats();
+  G.oppStats[seat][field] = val;
+  delete G.oppStats[seat].presetKey;
+  const info = classifyOpponent(G.oppStats[seat]);
+  const tr = e.target.closest('tr');
+  const badge = tr.querySelector('.opp-type-badge');
+  if(badge){ badge.textContent = info.name; badge.style.background = info.color + '22'; badge.style.color = info.color; badge.style.border = '1px solid ' + info.color + '66'; }
+  const tipCell = tr.querySelector('.opp-tip');
+  if(tipCell) tipCell.textContent = info.tip;
+  renderOppTypeGrid();
+}
+function autoFillOppStats(){
+  for(let i = 1; i < 8; i++){
+    const t = G.autoTrack[i];
+    if(!t || t.h === 0) continue;
+    const vpip = Math.round(t.vpip / t.h * 100);
+    const pfr  = Math.round(t.pfr  / t.h * 100);
+    const af   = t.calls > 0 ? round1(t.aggr / t.calls) : t.aggr;
+    const old = G.oppStats[i] || emptyStats();
+    G.oppStats[i] = Object.assign(emptyStats(), old, { hands: t.h, vpip, pfr, af });
+    delete G.oppStats[i].presetKey;
+  }
+  renderOppPanel();
+  addLog('系统', '已从本局自动统计 VPIP/PFR/AF', 'info');
+}
+function resetOppStats(){
+  if(!confirm('清空所有对手数据？')) return;
+  G.oppStats = makeDefaultOppStats();
+  for(let i = 1; i < 8; i++) G.autoTrack[i] = {h:0,vpip:0,pfr:0,aggr:0,calls:0};
+  renderOppPanel();
+}
+function fillSampleData(){
+  const picks = ['LAG','TAG','CALLING_STATION','MANIAC','WINNER','EXPLOITABLE','SUPER_FISH'];
+  for(let i = 1; i < 8; i++){
+    const key = picks[(i - 1) % picks.length];
+    const pre = OPP_TYPE_PRESETS.find(x => x.key === key);
+    G.oppStats[i] = Object.assign(emptyStats(), pre.stats, { presetKey: key });
+  }
+  renderOppPanel();
+  addLog('系统', '已为 7 个座位填入示例对手类型', 'info');
+}
+
+/* ==================================================================
+   本地胜率计算（前端）
+   ================================================================== */
+function fetchPokerMath(){
+  if (!G.players[0] || G.players[0].hand.length < 2) return null;
+  const hero = G.players[0].hand.map(c => c.rank + c.suit);
+  const board = G.communityCards.map(c => c.rank + c.suit);
+  const toCall = Math.max(G.currentBet - G.players[0].committed, 0);
+  const numOpp = activeCount() - 1;
+  try {
+    return calcEquityLocal(hero, board, Math.max(1, numOpp), G.pot, toCall);
+  } catch(e) {
+    console.warn('本地计算失败:', e);
+    return null;
+  }
+}
+
+function buildSituationText() {
+  if (!G.players[0] || G.players[0].hand.length < 2) return null;
+  const hero = G.players[0];
+  const role = G.roles[0] || '—';
+  const board = G.communityCards;
+  const streetMap = { preflop:'翻牌前', flop:'翻牌', turn:'转牌', river:'河牌' };
+  const streetCN = streetMap[G.street] || G.street;
+  const needToCall = Math.max(G.currentBet - hero.committed, 0);
+  const effStack = hero.stack;
+  const spr = (effStack / (G.pot || 1)).toFixed(2);
+  const potOdds = needToCall > 0 ? ((needToCall / (G.pot + needToCall)) * 100).toFixed(1) + '%' : '—';
+  const heroHandText = hero.hand.map(c => c.rank + c.sym).join(' ');
+  const boardText = board.length > 0 ? board.map(c => c.rank + c.sym).join(' ') : '无';
+  const ipRoles = ['BTN','CO','HJ'];
+  const heroIP = ipRoles.includes(role);
+
+  const streetOrder = ['preflop','flop','turn','river'];
+  let historyText = '';
+  for (const st of streetOrder) {
+    const acts = G.actionHistory.filter(a => a.street === st);
+    if (!acts.length) continue;
+    const parts = acts.map(a => {
+      const seatName = a.seat === 0 ? '我(玩家)' : `座位${a.seat}`;
+      const roleName = G.roles[a.seat] ? `[${G.roles[a.seat]}]` : '';
+      let actText = { fold:'弃牌', check:'过牌', call:'跟注', raise:'加注', allin:'全下', bet:'下注' }[a.action] || a.action;
+      if (a.amount) actText += `到 ${a.amount.toFixed(1)}BB`;
+      return `${seatName}${roleName} ${actText}`;
+    });
+    historyText += `  【${streetMap[st]}】 ${parts.join(' → ')}\n`;
+  }
+  if (!historyText) historyText = '  （尚无行动）\n';
+
+  let seatRoles = '';
+  for (let i = 0; i < 8; i++) {
+    if (!G.seatActive[i]) continue;
+    const p = G.players[i];
+    const r = G.roles[i] || '—';
+    const status = p.folded ? '已弃牌' : '在局中';
+    const cm = p.committed > 0 ? ` 本街已投 ${p.committed.toFixed(1)}BB` : '';
+    seatRoles += `  座位${i}${i === 0 ? '（我）' : ''}: ${r} · ${status} · 剩余 ${(p.stack||0).toFixed(1)}BB${cm}\n`;
+  }
+
+  let oppProfiles = '';
+  for (let i = 1; i < 8; i++) {
+    if (!G.seatActive[i]) continue;
+    const st = G.oppStats[i];
+    if (!st || (st.hands === 0 && st.vpip === 0 && !st.presetKey)) continue;
+    const info = classifyOpponent(st);
+    oppProfiles += `  ▶ 座位${i} [${G.roles[i]||'—'}] → ${info.name}\n`;
+    oppProfiles += `      手数=${st.hands} VPIP=${st.vpip}% PFR=${st.pfr}% AF=${st.af}\n`;
+    oppProfiles += `      入池胜率=${st.wwsf}% 每手胜率=${st.winRate}% 每百手=${st.bb100}bb\n`;
+    oppProfiles += `      翻前胜率=${st.preflopWin}% 翻牌率=${st.flopRate}% 翻牌胜率=${st.flopWin}%\n`;
+    oppProfiles += `      AllIn胜率=${st.allinWin}% 摊牌率=${st.wtsd}% 摊牌胜率=${st.wsd}%\n`;
+    oppProfiles += `      剥削点：${info.tip}\n`;
+  }
+  if (!oppProfiles) oppProfiles = '  （未设置对手数据，按 GTO 基准）\n';
+
+  const currentActor = G.roles[G.actorIdx] ? `座位${G.actorIdx}（${G.roles[G.actorIdx]}）` : '无';
+
+  return `【8-Max NLHE 局面 · 对手模型：真实线上玩家】
+
+▶ 我的手牌: ${heroHandText}
+▶ 我的位置: ${role} ${heroIP ? '(IP 有位置)' : '(OOP 无位置)'}
+▶ 公共牌: ${boardText}
+▶ 当前街道: ${streetCN}
+▶ 当前行动者: ${currentActor}
+
+▶ 盲注: 小盲 ${G.sbSize} / 大盲 ${G.bbSize} BB${G.straddleSize>0?` / 抓头 ${G.straddleSize} BB`:''}${G.anteSize>0?` / 底注 ${G.anteSize} BB`:''}
+▶ 每人起始筹码: ${STACK} BB
+▶ 底池: ${G.pot.toFixed(1)} BB
+▶ 当前下注额: ${G.currentBet.toFixed(1)} BB
+▶ 我需要跟注: ${needToCall.toFixed(1)} BB
+▶ 底池赔率: ${potOdds}
+▶ 我的剩余筹码: ${effStack.toFixed(1)} BB
+▶ 有效SPR: ${spr}
+
+▶ 座位与角色:
+${seatRoles}
+▶ 对手数据画像（关键）:
+${oppProfiles}
+▶ 行动历史:
+${historyText}`;
+}
+
+const DEEPSEEK_SYSTEM_PROMPT = `你是一名职业 NLHE 牌手，专精 8-Max。你必须基于数据做决策，禁止凭感觉。
+
+【强制决策流程】
+第一步：检查本地计算的 equity 和 pot odds
+- 若 equity < pot odds 且 EV < 0，优先弃牌（除非有强听牌可半诈唬）
+- 若 equity > pot odds 且 EV > 0，跟注或加注
+
+第二步：检查对手画像（关键）
+- VPIP > 35% 且 PFR < 15%（跟注站）→ 只用价值下注，几乎不诈唬
+- WTSD < 15%（易弃牌）→ 河牌可大量诈唬（用带A/K的阻断牌）
+- AF > 3（疯狂）→ 强牌慢打，扩大抓诈唬
+- bb/100 > 15（赢家）→ 回归 GTO，避免大底池
+- 摊牌胜率 > 55% → 尊重其摊牌牌力，别硬找价值
+
+第三步：结合 SPR
+- SPR < 3：顶对以上可全下
+- SPR 3-6：顶对打两街
+- SPR > 6：只打两对以上
+
+第四步：结合牌面纹理
+- A高干燥面 → 33% 下注
+- K高干燥面 → 33-50%
+- 湿润面（同花/顺子听牌多）→ 66-75% 极化
+- 诈唬时优先用带 A/K 或坚果听牌的阻断牌
+
+【输出格式】严格按此格式（不要多余解释）：
+行动：<弃牌|过牌|跟注XBB|下注XBB|加注到XBB|全下>
+理由：<3行以内，必须引用 equity、pot odds、对手类型>
+置信度：<0-100>`;
+
+function parseSSEBuffer(buffer, onDelta){
+  const lines = buffer.split('\n');
+  const tail = lines.pop() || '';
+  for(const rawLine of lines){
+    const line = rawLine.trim();
+    if(!line || !line.startsWith('data:')) continue;
+    const data = line.slice(5).trim();
+    if(data === '[DONE]') continue;
+    try{
+      const json = JSON.parse(data);
+      const delta = json.choices?.[0]?.delta?.content || '';
+      if(delta) onDelta(delta);
+    }catch(e){ }
+  }
+  return tail;
+}
+
+async function getAIAdvice(manual){
+  if(AI_RUNNING){ if(!manual) return; }
+  const key = getApiKey();
+  if (!key) {
+    if(manual) showAdviceBox('⚠️ 请先在顶部输入 API Key 并点"保存"', '');
+    return;
+  }
+  const text = buildSituationText();
+  if (!text) {
+    if(manual) showAdviceBox('⚠️ 请先选择你的手牌', '');
+    return;
+  }
+
+  // 本地胜率计算
+  const mathData = fetchPokerMath();
+  if (mathData) {
+    document.getElementById('mathInfo').textContent =
+      `本地计算 · 胜率 ${mathData.equity_pct}% · 底池赔率 ${mathData.pot_odds_pct}% · EV ${mathData.ev_call} BB`;
+  } else {
+    document.getElementById('mathInfo').textContent = '本地计算不可用';
+  }
+
+  const mathText = mathData ?
+    `\n▶ 本地精确计算结果（必须基于此决策）:\n` +
+    `  胜率 equity: ${mathData.equity_pct}%\n` +
+    `  底池赔率 pot odds: ${mathData.pot_odds_pct}%\n` +
+    `  Call EV: ${mathData.ev_call} BB\n` +
+    `  EV 判断: ${mathData.ev_call > 0 ? '跟注有利可图（+EV）' : '弃牌更优（-EV）'}\n` +
+    `  ⚠️ 严禁自行估算胜率，必须使用以上数值。\n` : '';
+
+  const fullPrompt = text + mathText;
+
+  const btn = document.getElementById('aiBtn');
+  const liveDot = document.getElementById('liveDot');
+  const timerEl = document.getElementById('aiTimer');
+  const content = document.getElementById('aiAdviceContent');
+  const box = document.getElementById('aiAdvice');
+  const title = document.getElementById('aiAdviceTitle');
+
+  AI_RUNNING = true;
+  const mySeq = ++ADVICE_REQUEST_SEQ;
+  if (btn) { btn.disabled = true; btn.textContent = '🤖 思考中...'; }
+
+  box.style.display = 'block';
+  title.textContent = '🤖 DeepSeek 职业级建议' + (manual ? '' : '（自动）');
+  box.style.borderColor = '#7c3aed';
+  content.innerHTML = '<div style="font-size:18px;color:#a78bfa;font-weight:600;">⏳ 正在请求策略...</div>';
+  if (liveDot) liveDot.classList.add('on');
+  if (timerEl) timerEl.textContent = '';
+
+  const startTime = Date.now();
+  const timerInterval = setInterval(() => {
+    if (timerEl && mySeq === ADVICE_REQUEST_SEQ) {
+      timerEl.textContent = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+    }
+  }, 100);
+
+  let fullText = '';
+  let firstChunk = true;
+  const abortCtrl = new AbortController();
+  const timeoutId = setTimeout(() => abortCtrl.abort('timeout'), 60000);
+
+  try {
+    // 直接调 DeepSeek（无需后端）
+    const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: DEEPSEEK_SYSTEM_PROMPT },
+          { role: 'user', content: fullPrompt }
+        ],
+        stream: true,
+        temperature: 0.25,
+        max_tokens: 300
+      }),
+      signal: abortCtrl.signal
+    });
+
+    if (!resp.ok) {
+      clearTimeout(timeoutId); clearInterval(timerInterval);
+      const t = await resp.text();
+      let msg = `HTTP ${resp.status}`;
+      if (resp.status === 401) msg += ' · Key 无效';
+      else if (resp.status === 402) msg += ' · 余额不足';
+      else if (resp.status === 429) msg += ' · 请求太频繁';
+      if(mySeq === ADVICE_REQUEST_SEQ) showAdviceBox('❌ ' + msg, t.slice(0, 200));
+      return;
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if(mySeq !== ADVICE_REQUEST_SEQ){ try{ reader.cancel(); }catch(e){} break; }
+      sseBuf += decoder.decode(value, { stream: true });
+      sseBuf = parseSSEBuffer(sseBuf, (delta) => {
+        fullText += delta;
+        if (firstChunk) {
+          firstChunk = false;
+          title.textContent = '🤖 DeepSeek 输出中...' + (manual ? '' : '（自动）');
+        }
+        content.innerHTML =
+          '<div style="font-size:18px;color:#d4af37;font-weight:800;text-align:left;white-space:pre-wrap;line-height:1.6;">' +
+          escapeHtml(fullText) +
+          '<span style="animation:blink 1s infinite;color:#a78bfa;">▊</span></div>';
+      });
+    }
+    clearTimeout(timeoutId); clearInterval(timerInterval);
+    if(mySeq !== ADVICE_REQUEST_SEQ){ return; }
+
+    const raw = fullText.trim() || '（无返回内容，请点击按钮重试）';
+    const mAct = raw.match(/行动[:：]\s*([^\n]+)/);
+    const actionLine = mAct ? mAct[1].trim() : raw.split('\n')[0];
+    const mReason = raw.match(/理由[:：]\s*([\s\S]*?)(?=\n置信度[:：]|$)/);
+    const mConf = raw.match(/置信度[:：]\s*(\d+)/);
+    const reason = mReason ? mReason[1].trim() : '';
+    const conf = mConf ? mConf[1] : '';
+
+    const amtMatch = actionLine.match(/([\d.]+)\s*BB/i);
+    if (amtMatch && (actionLine.includes('加注') || actionLine.includes('下注'))) {
+      const inp = document.getElementById('raiseInput');
+      if (inp) inp.value = parseFloat(amtMatch[1]);
+    }
+
+    let detail = reason;
+    if (conf) detail += (detail ? '\n' : '') + '置信度：' + conf;
+    if (timerEl) timerEl.textContent = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+    showAdviceBox(actionLine, detail);
+  } catch (e) {
+    clearTimeout(timeoutId); clearInterval(timerInterval);
+    if(mySeq !== ADVICE_REQUEST_SEQ) return;
+    if (e && e.name === 'AbortError') {
+      showAdviceBox('❌ 请求超时或被取消', '已收到部分内容：\n' + fullText);
+    } else {
+      showAdviceBox('❌ 请求异常', e.message);
+    }
+  } finally {
+    if(mySeq === ADVICE_REQUEST_SEQ){
+      if (liveDot) liveDot.classList.remove('on');
+      if (btn) { btn.disabled = false; btn.textContent = '🤖 立即获取 DeepSeek 建议'; }
+      AI_RUNNING = false;
+    }
+  }
+}
+
+function showAdviceBox(main, detail){
+  const box = document.getElementById('aiAdvice');
+  const title = document.getElementById('aiAdviceTitle');
+  const content = document.getElementById('aiAdviceContent');
+  box.style.display = 'block';
+  title.textContent = '🤖 DeepSeek 职业级建议';
+  box.style.borderColor = '#7c3aed';
+  content.innerHTML =
+    '<div style="font-size:22px;color:#d4af37;font-weight:900;text-align:center;">' + escapeHtml(main) + '</div>' +
+    (detail ? '<div style="font-size:12px;color:#888;font-weight:400;margin-top:8px;white-space:pre-wrap;text-align:left;line-height:1.6;">' + escapeHtml(detail) + '</div>' : '');
+}
+
+function resetAll(){
+  const savedActive={...G.seatActive};
+  const savedOpp = G.oppStats;
+  G = {
+    dealerSeat:null, roles:{}, roleToSeat:{}, players:{},
+    street:'preflop', pot:0, currentBet:0, lastRaiseSize:1,
+    actorIdx:0, actionsLeft:0, lastAggressor:null,
+    communityCards:[], pickMode:null, cardsToPick:0,
+    tempHand:[], tempPickedCards:[], handCount:0, actionHistory:[],
+    preflopRaiser:null,
+    seatActive:{...savedActive},
+    sbSize:0.5, bbSize:1, straddleSize:0, anteSize:0, straddleSeat:-1,
+    waitingForHero:false,
+    oppStats: savedOpp,
+    stackBySeat: {},
+    showdownRevealed: false,
+    autoTrack: {
+      1:{h:0,vpip:0,pfr:0,aggr:0,calls:0}, 2:{h:0,vpip:0,pfr:0,aggr:0,calls:0},
+      3:{h:0,vpip:0,pfr:0,aggr:0,calls:0}, 4:{h:0,vpip:0,pfr:0,aggr:0,calls:0},
+      5:{h:0,vpip:0,pfr:0,aggr:0,calls:0}, 6:{h:0,vpip:0,pfr:0,aggr:0,calls:0},
+      7:{h:0,vpip:0,pfr:0,aggr:0,calls:0}
+    }
+  };
+  document.getElementById('actionPanel').style.display='none';
+  closePicker();
+  document.getElementById('waitingOverlay').style.display='none';
+  document.getElementById('communityCards').innerHTML='';
+  document.getElementById('potDisplay').textContent='底池: 0 BB';
+  document.getElementById('streetLabel').textContent='选择庄位开始';
+  document.getElementById('actionLog').innerHTML=''; document.getElementById('actionLog').style.display='none';
+  document.getElementById('aiAdvice').style.display='none';
+  document.getElementById('aiTimer').textContent='';
+  document.getElementById('mathInfo').textContent='';
+  document.getElementById('dealerSelect').value='';
+  document.querySelectorAll('.seat').forEach(el=>el.classList.remove('my-seat','active-seat','folded','inactive-seat'));
+  document.querySelectorAll('.seat-label').forEach(el=>{ el.style.display='none'; el.textContent=''; });
+  for(let i=0;i<8;i++){
+    document.getElementById('cards-'+i).innerHTML=''; document.getElementById('role-'+i).textContent='—';
+    if(i!==0){ const el=document.getElementById('seat-'+i); if(!G.seatActive[i]) el.classList.add('inactive-seat'); const t=el.querySelector('.seat-toggle'); if(t) t.textContent=G.seatActive[i]?'✕':'✓'; }
+  }
+  renderOppPanel();
+  updateUI();
+}
+
+/* ============ 启动 ============ */
+loadApiKey();
+renderOppPanel();
+updateUI();
+adjustTableScale();
+document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+console.log('8-Max NLHE · 纯前端版（无后端）已加载');
+</script>
+</body>
+</html>
